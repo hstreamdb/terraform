@@ -124,4 +124,3 @@ groups:
         expr: jvm_gc_collection_seconds_sum
       - record: zk_jvm_memory_pool_bytes_used
         expr: jvm_memory_pool_bytes_used
-

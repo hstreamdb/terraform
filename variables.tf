@@ -1,56 +1,54 @@
 // ==== general config ====
 
-variable "region_name" {
-    type = string
-}
-variable "region_network_type" {
+variable "region" {
     type = string
 }
 
-variable "image_name" {
-  description = "The system image."
+variable "image_id" {
+  description = "System image id."
   type        = string
 }
 
 variable "key_pair_name" {
+  description = "Name of the key pairs used to access remote server."
   type        = string
 }
 
-variable "network_uuid" {
+variable "cidr_block" {
     type = string
-}
-
-variable "security_group_ids" {
-    type = string
+    default = "172.31.0.0/16"
 }
 
 variable "private_key_path" {
     type = string
-    default = null
 }
 
-// ==== server config ====
+variable "delete_block_on_termination" {
+    type = bool
+}
 
-variable "server_config" {
+// ==== store node config ====
+
+variable "store_config" {
   type = object({
-      node_count = number
-      flavor_name = string
-      data_disk_type = string
-      data_disk_size = number
-      system_disk_type = string
-      system_disk_size = number
+    node_count    = number
+    instance_type = string
+    volume_size   = number
+    volume_type   = string
+    iops          = number
+    throughput    = number
   })
 }
 
-// ==== client config ====
+// ==== compute node config ====
 
-variable "client_config" {
+variable "cal_config" {
   type = object({
-      node_count = number
-      flavor_name = string
-      data_disk_type = string
-      data_disk_size = number
-      system_disk_type = string
-      system_disk_size = number
+    node_count    = number
+    instance_type = string
+    volume_size   = number
+    volume_type   = string
+    iops          = number
+    throughput    = number
   })
 }
