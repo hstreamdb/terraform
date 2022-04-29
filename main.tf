@@ -200,11 +200,6 @@ resource "null_resource" "start-client" {
   provisioner "remote-exec" {
     script = "./file/client-node-start.sh"
   }
-
- provisioner "file" {
-     source      = "~/Documents/work/bench/"
-     destination = "/tmp"
- }
 }
 
 # -------------- dump net topology -----------------------
