@@ -1,0 +1,61 @@
+{
+    "hosts":
+        ${server_hosts},
+    "zookeeper": {
+        "persistent-dir": "/data/zookeeper",
+        "hosts": [
+            "hs-s1",
+            "hs-s2",
+            "hs-s3"
+        ],
+        "enable-metrics-provider": true
+    },
+    "hstore": {
+        "persistent-dir": "/data/store",
+        "hosts": [
+            "hs-s1",
+            "hs-s2",
+            "hs-s3"
+        ],
+        "local_config_path": "$PWD/file/logdevice.conf",
+        "remote_config_path": "~/dev-deploy/logdevice.conf"
+    },
+    "hstore-admin": {
+        "hosts": [
+            "hs-c1"
+        ]
+    },
+    "hserver": {
+        "image": "hstreamdb/hstream",
+        "hosts": [
+            "hs-s1",
+            "hs-s2",
+            "hs-s3"
+        ]
+    },
+    "prometheus": {
+        "hosts": [
+            "hs-c1"
+        ],
+        "local_config_path": "$PWD/file/prometheus-cfg",
+        "remote_config_path": "~/dev-deploy/local-prometheus-cfg"
+    },
+    "node-exporter": {
+        "hosts": [
+            "hs-s1",
+            "hs-s2",
+            "hs-s3",
+            "hs-c1"
+        ]
+    },
+    "cadvisor": {
+        "image": "gcr.io/cadvisor/cadvisor:v0.39.3",
+        "httpPort": 7000,
+        "hosts": [
+            "hs-s1",
+            "hs-s2",
+            "hs-s3",
+            "hs-c1"
+        ]
+    }
+}
