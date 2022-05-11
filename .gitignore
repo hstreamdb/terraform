@@ -35,4 +35,6 @@ override.tf.json
 # others
 tmp/*
 local*
-*/output
+file/topology
+file/prometheus-cfg/prometheus.yml
+file/config.json

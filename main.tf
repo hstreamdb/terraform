@@ -211,7 +211,7 @@ resource "null_resource" "dump_topology" {
     ]
 
     provisioner "local-exec" {
-        command = "terraform output -json > ./file/output"
+        command = "terraform output -json > ./file/topology"
     }
 }
 
