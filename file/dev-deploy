@@ -248,7 +248,7 @@ class Service:
             else ""
         )
         return [
-            f"{ssh_cmd}{host} '{cmd} rm -rf {persistent_dir}'"
+            f"{ssh_cmd}{host} '{cmd} sudo rm -rf {persistent_dir}'"
             for (host, _) in remotes
         ]
 

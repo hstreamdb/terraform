@@ -6,14 +6,13 @@ import re
 from pathlib import Path
 import json
 import sys
-from typing import List
+from typing import List, Dict
 
-TOTAL_TEST = ["read", "write", "end-to-end"]
-CMDS = {
-    "read": "./gradlew readBench",
-    "write": "./gradlew writeBench",
-    "end-to-end": "./gradlew readWriteBench",
-}
+CLUSTER_HOSTS_FILE = "./file/topology"
+STORE_CONFIG_FILE = "./file/logdevice.conf"
+CLUSTER_CONFIG_FILE = "./file/config.json"
+PROMETHUS_CONFIG_TEMPLATE = "./file/prometheus-cfg/prometheus.template"
+PROMETHUS_CONFIG_FILE = "./file/prometheus-cfg/prometheus.yml"
 
 logerr = lambda s: print(f"\033[91m{s}\033[0m")
 logdebug = lambda s: print(f"\033[95m[DEBUG] \033[0m{s}")
@@ -22,11 +21,11 @@ logwarn = lambda s: print(f"\033[33m{s}\033[0m")
 
 
 def run_cmd(
-    cmd: str,
-    stderr=subprocess.STDOUT,
-    stdout=None,
-    check: bool = True,
-    print_cmd: bool = False,
+        cmd: str,
+        stderr=subprocess.STDOUT,
+        stdout=None,
+        check: bool = True,
+        print_cmd: bool = False,
 ) -> subprocess.CompletedProcess:
     if print_cmd:
         loginfo(f"Run command: <{cmd}>")
@@ -93,6 +92,18 @@ def update_logdevice_config(address: List[str], path: str):
             sys.exit(1)
 
 
+def update_prometheus_config(hosts: Dict[str, str], path: str, template: str = PROMETHUS_CONFIG_TEMPLATE):
+    with open(template, "r+") as file:
+        content = file.read()
+        for k, v in hosts.items():
+            pattern = re.compile(k)
+            if re.search(pattern, content):
+                content = re.sub(pattern, v, content)
+
+    with open(path, "w") as file:
+        file.write(content)
+
+
 def run():
     parser = argparse.ArgumentParser(
         description="HStream perf script.",
@@ -109,15 +120,21 @@ def run():
 
     # 2. boot_strap
     global ssh_cmd
-    with open("./file/output", "r") as f:
+    with open(CLUSTER_HOSTS_FILE, "r") as f:
         config = json.load(f)
-        client_ips = config["client_public_ip"]["value"]
-        server_ips = config["server_public_ip"]["value"]
-        server_access_ips = config["server_access_ip"]["value"]
-    update_ssh_config(server_ips, args.key)
-    update_ssh_config(client_ips, args.key)
-    update_logdevice_config(server_access_ips, "./file/logdevice.conf")
-    boot_strap("./file/config.json", args.key)
+        cal_ips = config["client_public_ip"]["value"]
+        store_ips = config["server_public_ip"]["value"]
+        store_access_ips = config["server_access_ip"]["value"]
+        cal_access_ips = config["client_access_ip"]["value"]
+        store_hosts = {f"hs-s{idx + 1}": ip for (idx, ip) in enumerate(store_access_ips)}
+        cal_hosts = {f"hs-c{idx + 1}": ip for (idx, ip) in enumerate(cal_access_ips)}
+        hosts = {**store_hosts, **cal_hosts}
+    update_ssh_config(store_ips, args.key)
+    update_ssh_config(cal_ips, args.key)
+    update_prometheus_config(hosts, PROMETHUS_CONFIG_FILE)
+    update_logdevice_config(store_access_ips, STORE_CONFIG_FILE)
+    boot_strap(CLUSTER_CONFIG_FILE, args.key)
+
 
 if __name__ == "__main__":
     run()
