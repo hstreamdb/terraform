@@ -112,6 +112,18 @@ resource "aws_instance" "server" {
   vpc_security_group_ids      = [aws_security_group.hstream.id]
   subnet_id                   = aws_subnet.net.id
   associate_public_ip_address = true
+  user_data = <<-EOF
+    #!/bin/bash
+    echo "==== mount disks ===="
+    sudo mkdir /data
+    sudo mkdir /mnt/data{0,1}
+    sudo mkfs -t ext4 /dev/nvme1n1
+    sudo mkfs -t ext4 /dev/nvme2n1
+    sudo mount /dev/nvme1n1 /mnt/data0
+    sudo mount /dev/nvme2n1 /mnt/data1
+    sudo chown -R ubuntu /data
+    sudo chown -R ubuntu /mnt
+  EOF
 
   root_block_device {
     volume_size           = var.store_config.volume_size
