@@ -42,6 +42,7 @@ def run_cmd(
 
 def arg_parse(parser: argparse.ArgumentParser) -> argparse.Namespace:
     parser.add_argument("--key", "-k", type=Path, help="the public key's path.")
+    parser.add_argument("--user", default="ubuntu", help="remote server user name.")
     return parser.parse_args()
 
 
@@ -55,12 +56,12 @@ def terraform_down() -> subprocess.CompletedProcess:
     return run_cmd(cmd)
 
 
-def boot_strap(config: str, key: str):
-    cmd = f"./file/dev-deploy --remote '' simple --config {config} --user 'ubuntu' --key {key} start --disable-restart all"
+def boot_strap(config: str, key: str, user: str):
+    cmd = f"./file/dev-deploy --remote '' simple --config {config} --user '{user}' --key {key} start --disable-restart all"
     return run_cmd(cmd)
 
 
-def update_ssh_config(host: List[str], key: str):
+def update_ssh_config(host: List[str], key: str, user: str):
     for h in host:
         path = Path("$HOME/.ssh/known_hosts")
         key_clean_cmd = f"ssh-keygen -f {path} -R {h}"
@@ -70,7 +71,7 @@ def update_ssh_config(host: List[str], key: str):
             pass
 
         cmd = (
-            f"ssh -i {key} ubuntu@{h} -o 'StrictHostKeyChecking no' echo hello"
+            f"ssh -i {key} {user}@{h} -o 'StrictHostKeyChecking no' echo hello"
         )
         run_cmd(cmd)
 
@@ -119,7 +120,6 @@ def run():
     loginfo("set up terraform success")
 
     # 2. boot_strap
-    global ssh_cmd
     with open(CLUSTER_HOSTS_FILE, "r") as f:
         config = json.load(f)
         cal_ips = config["client_public_ip"]["value"]
@@ -129,11 +129,11 @@ def run():
         store_hosts = {f"hs-s{idx + 1}": ip for (idx, ip) in enumerate(store_access_ips)}
         cal_hosts = {f"hs-c{idx + 1}": ip for (idx, ip) in enumerate(cal_access_ips)}
         hosts = {**store_hosts, **cal_hosts}
-    update_ssh_config(store_ips, args.key)
-    update_ssh_config(cal_ips, args.key)
+    update_ssh_config(store_ips, args.key, args.user)
+    update_ssh_config(cal_ips, args.key, args.user)
     update_prometheus_config(hosts, PROMETHUS_CONFIG_FILE)
     update_logdevice_config(store_access_ips, STORE_CONFIG_FILE)
-    boot_strap(CLUSTER_CONFIG_FILE, args.key)
+    boot_strap(CLUSTER_CONFIG_FILE, args.key, args.user)
 
 
 if __name__ == "__main__":
