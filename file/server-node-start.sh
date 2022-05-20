@@ -40,15 +40,15 @@ sudo gpasswd -a ${USER} docker
 sudo systemctl restart docker
 sudo chmod a+rw /var/run/docker.sock
 
-echo "==== mount disks ===="
-sudo mkdir /data
-sudo mkfs -t ext4 /dev/nvme1n1
-sudo mount /dev/nvme1n1 /data
-sudo chown ubuntu /data
-# sudo mkdir /data/logdevice
-# echo 1 | sudo tee /data/logdevice/NSHARDS
-# sudo useradd logdevice
-# sudo chown -R logdevice /data/logdevice/
+# echo "==== mount disks ===="
+# sudo mkdir /data
+# sudo mkfs -t ext4 /dev/nvme1n1
+# sudo mount /dev/nvme1n1 /data
+# sudo chown ubuntu /data
+# # sudo mkdir /data/logdevice
+# # echo 1 | sudo tee /data/logdevice/NSHARDS
+# # sudo useradd logdevice
+# # sudo chown -R logdevice /data/logdevice/
 
 echo "==== pull images ===="
 docker pull hstreamdb/hstream 
