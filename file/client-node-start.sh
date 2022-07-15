@@ -42,11 +42,11 @@ sudo gpasswd -a ${USER} docker
 sudo systemctl restart docker
 sudo chmod a+rw /var/run/docker.sock
 
-echo "==== mount disks ===="
-sudo mkdir /data
-sudo chown ubuntu /data
-# sudo mkfs -t ext4 /dev/vdb
-# sudo mount /dev/vdb /data
+# echo "==== mount disks ===="
+# sudo mkdir /data
+# sudo chown ubuntu /data
+# # sudo mkfs -t ext4 /dev/vdb
+# # sudo mount /dev/vdb /data
 
 echo "==== pull images ===="
 docker pull hstreamdb/hstream 
