@@ -3,7 +3,7 @@
 echo "start server $1"
 
 sudo apt-get update
-sudo apt-get -y install apt-transport-https ca-certificates curl gnupg lsb-release sysstat glances
+sudo apt-get -y install apt-transport-https ca-certificates curl gnupg lsb-release sysstat glances dstat
 
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 echo \

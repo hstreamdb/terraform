@@ -10,6 +10,6 @@ groups:
       - record: cluster:disk:disk_write_io
         expr: sum(rate(node_disk_written_bytes_total[1m])) by (instance)
       - record: cluster:net:network_receive_io
-        expr: sum(rate(node_network_receive_bytes_total{device!~"lo | veth.* | docker.* | flannel.* | cali.* | cbr."}[5m])) by (instance)
+        expr: sum(rate(node_network_receive_bytes_total{device!~"lo | veth.* | docker.* | flannel.* | cali.* | cbr."}[1m])) by (instance)
       - record: cluster:net:network_transmit_io
-        expr: sum(rate(node_network_transmit_bytes_total{device!~"lo | veth.* | docker.* | flannel.* | cali.* | cbr."}[5m])) by (instance)
+        expr: sum(rate(node_network_transmit_bytes_total{device!~"lo | veth.* | docker.* | flannel.* | cali.* | cbr."}[1m])) by (instance)
