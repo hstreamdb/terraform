@@ -3,7 +3,7 @@
 echo "start client $1"
 
 sudo apt-get update
-sudo apt-get -y install apt-transport-https ca-certificates curl gnupg lsb-release sysstat glances zip openjdk-11-jre-headless
+sudo apt-get -y install apt-transport-https ca-certificates curl gnupg lsb-release sysstat glances zip openjdk-11-jre-headless dstat
 curl -s "https://get.sdkman.io" | bash && source "$HOME/.sdkman/bin/sdkman-init.sh"
 sdk install gradle
 
