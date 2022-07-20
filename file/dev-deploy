@@ -42,6 +42,24 @@ DEFAULT_CONTAINER_CONFIG_PATH = "/etc/hstream/config.yaml"
 
 ssh_cmd = ""
 
+ADMIN_OPTS = (
+    f"--enable-maintenance-manager "
+    f"--enable-safety-check-periodic-metadata-update "
+    f"--maintenance-log-snapshotting "
+    f"--enable-safety-check-periodic-metadata-update "
+)
+
+
+def parse_roles(role: str) -> str:
+    if role == "Both":
+        return "--roles storage,sequencer "
+    elif role == "Storage":
+        return "--roles storage "
+    elif role == "Sequencer":
+        return "--roles sequencer "
+    else:
+        raise f"Unknown roles: {role}"
+
 
 def run_sh(
     sh, stderr=subprocess.STDOUT, stdout=None, check=True, print_cmd=False
@@ -108,8 +126,11 @@ def set_config_path(custom: str, origin: str) -> str:
 def set_resource_constraints(memory_cpus: Tuple[str, str]) -> str:
     memory, cpus = memory_cpus
     return (
-        f" --memory={memory} " if memory else ""
-        f" --cpus={cpus} " if cpus else ""
+        f" --memory={memory} "
+        if memory
+        else "" f" --cpus={cpus} "
+        if cpus
+        else ""
     )
 
 
@@ -125,7 +146,9 @@ def synchronize_configs(
         assert remote_config_path is not None
         for (remote, _) in hosts:
             cmds.append(
-                scp_command(local_config_path, remote, user, key, remote_config_path)
+                scp_command(
+                    local_config_path, remote, user, key, remote_config_path
+                )
             )
     return cmds
 
@@ -476,6 +499,7 @@ class HStoreAdminService(Service):
     BOOTSTRAP_CMD = (
         "hadmin store nodes-config bootstrap --metadata-replicate-across "
     )
+    DEFAULT_ADMIN_LISTEN_PORT = 6441
     # TCP port on which the server listens to for admin commands, supports commands over SSL
     DEFAULT_ADMIN_API_PORT = 6440
     # TCP port on which the server listens for non-SSL clients
@@ -609,9 +633,10 @@ class HStoreAdminService(Service):
                     f"--name {container_name} "
                     f"--network host {image} /usr/local/bin/ld-admin-server "
                     f"--config-path {config_path} "
-                    "--enable-maintenance-manager "
-                    "--maintenance-log-snapshotting "
-                    "--enable-safety-check-periodic-metadata-update "
+                    f"--enable-maintenance-manager "
+                    f"--maintenance-log-snapshotting "
+                    f"--enable-safety-check-periodic-metadata-update "
+                    f"--admin-port {self.DEFAULT_ADMIN_LISTEN_PORT} "
                     f"'"
                 )
 
@@ -625,6 +650,7 @@ class HStoreAdminService(Service):
         server_list: str,
         replicates: int,
         wait: int,
+        admin_port: int,
         **kargs,
     ) -> List[str]:
         servers = self.parse_remotes(server_list)
@@ -638,7 +664,7 @@ class HStoreAdminService(Service):
             return [
                 f"{ssh_cmd}{host} -t "
                 f"'{wait_port} sleep {wait} && "
-                f"{container_bin} exec -it {container_name} {self.BOOTSTRAP_CMD} node:{replicates}'"
+                f"{container_bin} exec -it {container_name} {self.BOOTSTRAP_CMD} node:{replicates} --port {admin_port} '"
                 for (host, _) in remotes
             ]
 
@@ -727,6 +753,7 @@ class HStoreService(Service):
         config_path: str,
         remotes: List[Tuple[str, str]],
         disks: int,
+        roles: List[str],
         rm: bool = False,
         restart: bool = True,
         **kargs,
@@ -763,6 +790,7 @@ class HStoreService(Service):
                     f"--name ld_{i} --address {addr} "
                     f"--local-log-store-path {data_dir} "
                     f"--num-shards {shards} "
+                    f"{roles[i]} "
                     f"'"
                 )
         return cmds
@@ -786,8 +814,7 @@ class HStoreService(Service):
         # sure data cleared when shard directories are symbolic links
         clean_cmd = f"sudo rm -rf {persistent_dir}/shard*/* {persistent_dir}"
         return [
-            f"{ssh_cmd}{host} '{cmd} {clean_cmd} '"
-            for (host, _) in remotes
+            f"{ssh_cmd}{host} '{cmd} {clean_cmd} '" for (host, _) in remotes
         ]
 
 
@@ -886,7 +913,7 @@ class HServerService(Service):
                     f"{container_bin} run -d "
                     f"{docker_opts} "
                     f"--name {container_name} "
-                    "--network host "
+                    f"--network host "
                     f"{image} /usr/local/bin/hstream-server "
                     f"--host {addr} "
                     f"--address {addr} "
@@ -1245,7 +1272,7 @@ class GrafanaService(Service):
                 logwarn(f"Service {self.KEYS[0]} already running.")
             else:
                 cmds.append(
-                    f"{ssh_cmd} {host} '"
+                    f"{ssh_cmd}{host} '"
                     f"{container_bin} run -d "
                     f"--network host "
                     f"{docker_opts} "
@@ -1325,16 +1352,39 @@ class SimpleService(Service):
             self.config_path_in_zk = (
                 "zk:" + self.zk_ip + self.DEFAULT_STORE_CONFIG_NODE_IN_ZK
             )
-            self.admin_hosts = [
-                # (host, deploy_cfg["hosts"][host])
-                (deploy_cfg["hosts"][host][0], deploy_cfg["hosts"][host][1])
-                for host in (deploy_cfg["hstore-admin"])["hosts"]
-            ]
-            self.hstore_hosts = [
-                # (host, deploy_cfg["hosts"][host])
-                (deploy_cfg["hosts"][host][0], deploy_cfg["hosts"][host][1])
-                for host in (deploy_cfg["hstore"])["hosts"]
-            ]
+
+            self.admin_hosts = []
+            admin = deploy_cfg["hstore-admin"]["hosts"]
+            self.admin_embed = deploy_cfg["hstore-admin"]["embed"]
+            if deploy_cfg["hstore-admin"]["embed"]:
+                if not admin in deploy_cfg["hstore"]["hosts"]:
+                    raise "hadmin node not in hstore hosts' list."
+            else:
+                self.admin_hosts = [
+                    # (host, deploy_cfg["hosts"][host])
+                    (
+                        deploy_cfg["hosts"][admin][0],
+                        deploy_cfg["hosts"][admin][1],
+                    )
+                ]
+
+            self.hstore_hosts = []
+            self.hstore_roles = []
+            for (host, role) in deploy_cfg["hstore"]["hosts"].items():
+                self.hstore_hosts.append(
+                    (deploy_cfg["hosts"][host][0], deploy_cfg["hosts"][host][1])
+                )
+                role_opt = parse_roles(role)
+                if deploy_cfg["hstore-admin"]["embed"] and admin == host:
+                    role_opt += ADMIN_OPTS
+                    self.admin_hosts = [
+                        (
+                            deploy_cfg["hosts"][host][0],
+                            deploy_cfg["hosts"][host][1],
+                        )
+                    ]
+                self.hstore_roles.append(role_opt)
+
             self.hserver_hosts = [
                 # (host, deploy_cfg["hosts"][host])
                 (deploy_cfg["hosts"][host][0], deploy_cfg["hosts"][host][1])
@@ -1356,7 +1406,7 @@ class SimpleService(Service):
                 for host in (deploy_cfg["cadvisor"])["hosts"]
             ]
             self.grafana_hosts = [
-                (host, deploy_cfg["hosts"][host])
+                (deploy_cfg["hosts"][host][0], deploy_cfg["hosts"][host][1])
                 for host in (deploy_cfg["grafana"])["hosts"]
             ]
 
@@ -1500,16 +1550,17 @@ class SimpleService(Service):
         cmds.extend(self.ZK_SVC.post_start_cmd(**zk_cmd_args))
 
         # start hstore_admin
-        admin_args = {
-            "container_bin": self.DEFAULT_CONTAINER_BIN,
-            "container_name": HStoreAdminService.DEFAULT_CONTAINER_NAME,
-            "image": self.hadmin_image,
-            "memory_cpus": self.hadmin_memory_cpus,
-            "config_path": self.config_path_in_zk,
-            "remotes": self.admin_hosts,
-            "restart": False if "hadmin" in disable_restarted else True,
-        }
-        cmds.extend(self.HSTORE_ADMIN_SVC.start_cmd(**admin_args))
+        if not self.admin_embed:
+            admin_args = {
+                "container_bin": self.DEFAULT_CONTAINER_BIN,
+                "container_name": HStoreAdminService.DEFAULT_CONTAINER_NAME,
+                "image": self.hadmin_image,
+                "memory_cpus": self.hadmin_memory_cpus,
+                "config_path": self.config_path_in_zk,
+                "remotes": self.admin_hosts,
+                "restart": False if "hadmin" in disable_restarted else True,
+            }
+            cmds.extend(self.HSTORE_ADMIN_SVC.start_cmd(**admin_args))
 
         # start hstore
         store_args = {
@@ -1524,19 +1575,27 @@ class SimpleService(Service):
             "remotes": self.hstore_hosts,
             "restart": False if "hstore" in disable_restarted else True,
             "disks": self.disks,
+            "roles": self.hstore_roles,
         }
         cmds.extend(self.HSTORE_SVC.start_cmd(**store_args))
 
         # bootstrap
+        if self.admin_embed:
+            image = HStoreService.DEFAULT_CONTAINER_NAME
+            admin_port = 6440
+        else:
+            image = HStoreAdminService.DEFAULT_CONTAINER_NAME
+            admin_port = 6441
         bootstrap_args = {
             "container_bin": self.DEFAULT_CONTAINER_BIN,
-            "container_name": HStoreAdminService.DEFAULT_CONTAINER_NAME,
+            "container_name": image,
             "remotes": self.admin_hosts,
             "replicates": 3,
             "server_list": ",".join(
                 map(lambda pair: f"{pair[0]}:{pair[1]}", self.hstore_hosts)
             ),
             "wait": 4,
+            "admin_port": admin_port,
         }
         cmds.extend(self.HSTORE_ADMIN_SVC.bootstrap_cmd(**bootstrap_args))
 
@@ -1632,13 +1691,14 @@ class SimpleService(Service):
         cmds.extend(self.HSTORE_SVC.stop_cmd(**store_args))
 
         # stop hstore-admin
-        admin_args = {
-            "container_bin": self.DEFAULT_CONTAINER_BIN,
-            "container_name": HStoreAdminService.DEFAULT_CONTAINER_NAME,
-            "remotes": self.admin_hosts,
-            "force": True,
-        }
-        cmds.extend(self.HSTORE_ADMIN_SVC.stop_cmd(**admin_args))
+        if not self.admin_embed:
+            admin_args = {
+                "container_bin": self.DEFAULT_CONTAINER_BIN,
+                "container_name": HStoreAdminService.DEFAULT_CONTAINER_NAME,
+                "remotes": self.admin_hosts,
+                "force": True,
+            }
+            cmds.extend(self.HSTORE_ADMIN_SVC.stop_cmd(**admin_args))
 
         # stop zk
         zk_args = {
