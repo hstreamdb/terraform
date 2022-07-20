@@ -59,5 +59,14 @@
             "hs-s3",
             "hs-c1"
         ]
+    },
+    "grafana": {
+        "image": "grafana/grafana-oss:main",
+        "disable-login": true,
+        "local-provisioning-path": "$PWD/configs/grafana-provisioning",
+        "remote-provisioning-path": "/root/.config/dev-deploy/grafana/configs/provisioning",
+        "hosts": [
+            "hs-c1"
+        ]
     }
 }
