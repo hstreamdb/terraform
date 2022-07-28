@@ -904,6 +904,7 @@ class HServerService(Service):
                 config_path, DEFAULT_CONTAINER_CONFIG_PATH
             )
         cmds = []
+        seed_address = remotes[0][1]
         for (i, (host, addr)) in enumerate(remotes):
             if is_container_running(host, container_name, container_bin):
                 logwarn(f"Service {self.KEYS[0]} already running.")
@@ -923,6 +924,7 @@ class HServerService(Service):
                     f"--store-admin-host {store_admin_host} "
                     f"--server-id {i} "
                     f"--store-log-level error "
+                    f"--seed-nodes {seed_address}"
                     f"'"
                 )
         return cmds
