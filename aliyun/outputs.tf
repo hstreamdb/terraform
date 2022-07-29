@@ -14,11 +14,11 @@ output "server_access_ip" {
   value = alicloud_instance.storage_instance[*].private_ip
 }
 
-#output "client_public_ip" {
-#  value = aws_instance.client[*].public_ip
-#}
-#
-#output "client_access_ip" {
-#  value = aws_instance.client[*].private_ip
-#}
+output "client_public_ip" {
+  value = alicloud_instance.calculate_instance[*].public_ip
+}
+
+output "client_access_ip" {
+  value = alicloud_instance.calculate_instance[*].private_ip
+}
 

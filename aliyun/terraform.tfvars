@@ -1,5 +1,5 @@
 region = "cn-zhangjiakou"
-zone   = "cn-zhangjiakou-a"
+zone   = "cn-zhangjiakou-c"
 #region         = "cn-hangzhou"
 #zone           = "cn-hangzhou-a"
 vpc_cidr_block   = "172.10.0.0/16"
@@ -74,23 +74,22 @@ egress_with_cidr_blocks = [
   }
 ]
 
-internet_charge_type = "PayByTraffic"
+internet_charge_type       = "PayByTraffic"
+internet_max_bandwidth_out = 100
 
 # ==== store node config ====
 
-calculate_instance_type = "ecs.i2gne.2xlarge"
-
 storage_instance_config = {
-  node_count = 2
+  node_count = 3
   #  instance_type        = "ecs.i2gne.2xlarge"
-  instance_type        = "ecs.g6.large"
+  instance_type        = "ecs.i2gne.4xlarge"
   system_disk_category = "cloud_efficiency"
   system_disk_size     = 50
 }
 
 calculate_instance_config = {
   node_count           = 1
-  instance_type        = "ecs.i2gne.2xlarge"
+  instance_type        = "ecs.g6.4xlarge"
   system_disk_category = "cloud_efficiency"
   system_disk_size     = 50
 }

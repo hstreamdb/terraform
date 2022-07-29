@@ -12,20 +12,20 @@
     },
     "hstore": {
         "persistent-dir": "/data/store",
-        "disks": 2,
-        "shards": 4,
-        "hosts": [
-            "hs-s1",
-            "hs-s2",
-            "hs-s3"
-        ],
+        "disks": 1,
+        "shards": 2,
+        "hosts": {
+            "hs-s1": "Both",
+            "hs-s2": "Both",
+            "hs-s3": "Both"
+        },
         "local_config_path": "$PWD/file/logdevice.conf",
         "remote_config_path": "~/dev-deploy/logdevice.conf"
     },
     "hstore-admin": {
-        "hosts": [
-            "hs-c1"
-        ]
+        "hosts": "hs-c1",
+        "meta-replication": 3,
+        "embed": false
     },
     "hserver": {
         "image": "hstreamdb/hstream",
@@ -63,8 +63,8 @@
     "grafana": {
         "image": "grafana/grafana-oss:main",
         "disable-login": true,
-        "local-provisioning-path": "$PWD/configs/grafana-provisioning",
-        "remote-provisioning-path": "/root/.config/dev-deploy/grafana/configs/provisioning",
+        "local-provisioning-path": "$PWD/file/grafana-provisioning",
+        "remote-provisioning-path": "~/dev-deploy/grafana",
         "hosts": [
             "hs-c1"
         ]

@@ -1,7 +1,7 @@
 // ==== general config ====
 
 variable "region" {
-    type = string
+  type = string
 }
 
 variable "image_id" {
@@ -15,16 +15,16 @@ variable "key_pair_name" {
 }
 
 variable "cidr_block" {
-    type = string
-    default = "172.31.0.0/16"
+  type    = string
+  default = "172.31.0.0/16"
 }
 
 variable "private_key_path" {
-    type = string
+  type = string
 }
 
 variable "delete_block_on_termination" {
-    type = bool
+  type = bool
 }
 
 // ==== store node config ====

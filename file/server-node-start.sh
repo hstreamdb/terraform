@@ -51,7 +51,7 @@ sudo chmod a+rw /var/run/docker.sock
 # # sudo chown -R logdevice /data/logdevice/
 
 echo "==== pull images ===="
-docker pull hstreamdb/hstream 
+docker pull hstreamdb/hstream:latest
 docker pull zookeeper:3.6
 docker pull gcr.io/cadvisor/cadvisor:v0.39.3
 docker pull prom/node-exporter
