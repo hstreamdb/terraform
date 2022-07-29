@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">=1.121.0"
+  required_version = ">=1.1.9"
   required_providers {
     alicloud = {
       source  = "hashicorp/alicloud"
@@ -35,7 +35,6 @@ resource "alicloud_instance" "storage_instance" {
   security_groups   = [module.ali_sec_group.sec_group_id]
 
   instance_type              = var.storage_instance_config.instance_type
-  key_name                   = ""
   system_disk_category       = var.storage_instance_config.system_disk_category
   system_disk_size           = var.storage_instance_config.system_disk_size
   image_id                   = var.image_id
@@ -48,12 +47,8 @@ resource "alicloud_instance" "storage_instance" {
     echo "==== mount disks ===="
     sudo mkdir /data
     sudo mkdir /mnt/data{0,1}
-    sudo mkfs -t ext4 /dev/nvme1n1
-    sudo mkfs -t ext4 /dev/nvme2n1
-    sudo mount /dev/nvme1n1 /mnt/data0
-    sudo mount /dev/nvme2n1 /mnt/data1
-    sudo chown -R ubuntu /data
-    sudo chown -R ubuntu /mnt
+    sudo mkfs -t ext4 /dev/vdb
+    sudo mount /dev/vdb /mnt/data0
   EOF
 }
 
@@ -63,26 +58,30 @@ resource "alicloud_instance" "calculate_instance" {
   security_groups   = [module.ali_sec_group.sec_group_id]
 
   instance_type              = var.calculate_instance_config.instance_type
-  key_name                   = ""
   system_disk_category       = var.calculate_instance_config.system_disk_category
   system_disk_size           = var.calculate_instance_config.system_disk_size
   image_id                   = var.image_id
-  instance_name              = "hserver-${count.index}"
+  instance_name              = "hclient-${count.index}"
   vswitch_id                 = module.ali_vpc.vsw_id
   internet_max_bandwidth_out = var.internet_max_bandwidth_out
   internet_charge_type       = var.internet_charge_type
 }
 
-resource "alicloud_key_pair_attachment" "attachment" {
+resource "alicloud_key_pair_attachment" "attachment_storage" {
   key_pair_name = var.key_pair_name
   instance_ids  = alicloud_instance.storage_instance.*.id
+}
+
+resource "alicloud_key_pair_attachment" "attachment_calculate" {
+  key_pair_name = var.key_pair_name
+  instance_ids  = alicloud_instance.calculate_instance.*.id
 }
 
 # ------------ step ------------
 
 # ----------- generate config file -------------------
 resource "local_file" "config" {
-  depends_on = [alicloud_instance.storage_instance, alicloud_instance.calculate_instance]
+  depends_on = [alicloud_instance.storage_instance, alicloud_instance.calculate_instance, alicloud_key_pair_attachment.attachment_storage, alicloud_key_pair_attachment.attachment_calculate]
   filename   = "../file/config.json"
   content = templatefile("../file/clusterCfg.json.tftpl", {
     server_hosts = jsonencode(
@@ -107,7 +106,7 @@ resource "null_resource" "start-server" {
   count      = var.storage_instance_config.node_count
 
   connection {
-    user        = "ubuntu"
+    user        = "root"
     private_key = file(var.private_key_path)
     host        = alicloud_instance.storage_instance[count.index].public_ip
   }
@@ -122,7 +121,7 @@ resource "null_resource" "start-client" {
   count      = var.calculate_instance_config.node_count
 
   connection {
-    user        = "ubuntu"
+    user        = "root"
     private_key = file(var.private_key_path)
     host        = alicloud_instance.calculate_instance[count.index].public_ip
   }

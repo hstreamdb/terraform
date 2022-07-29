@@ -13,7 +13,7 @@ terraform {
 
 provider "aws" {
   /* profile = "default" */
-  region  = var.region
+  region = var.region
   # setting `access_key` and `secret_key` via environment
   # variables `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
 }
@@ -21,12 +21,12 @@ provider "aws" {
 # --------------------------------------------------------------------------------
 
 resource "aws_vpc" "vpc" {
-    cidr_block = var.cidr_block
+  cidr_block = var.cidr_block
 }
 
 resource "aws_subnet" "net" {
-    vpc_id     = aws_vpc.vpc.id
-    cidr_block = var.cidr_block
+  vpc_id     = aws_vpc.vpc.id
+  cidr_block = var.cidr_block
 }
 
 resource "aws_internet_gateway" "gateway" {
@@ -72,33 +72,33 @@ resource "aws_security_group" "hstream" {
     self      = true
   }
   ingress {
-      from_port   = 7070
-      to_port     = 7070
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+    from_port   = 7070
+    to_port     = 7070
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-      from_port   = 7000
-      to_port     = 7000
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+    from_port   = 7000
+    to_port     = 7000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-      from_port   = 9100
-      to_port     = 9100
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+    from_port   = 9100
+    to_port     = 9100
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
-      from_port   = 9090
-      to_port     = 9090
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   vpc_id = aws_vpc.vpc.id
   tags = {
-      Name = "hstream-cluster"
+    Name = "hstream-cluster"
   }
 }
 
@@ -112,7 +112,7 @@ resource "aws_instance" "server" {
   vpc_security_group_ids      = [aws_security_group.hstream.id]
   subnet_id                   = aws_subnet.net.id
   associate_public_ip_address = true
-  user_data = <<-EOF
+  user_data                   = <<-EOF
     #!/bin/bash
     echo "==== mount disks ===="
     sudo mkdir /data
@@ -134,7 +134,7 @@ resource "aws_instance" "server" {
   }
 
   tags = {
-      Name = "hserver-${count.index}"
+    Name = "hserver-${count.index}"
   }
 }
 
@@ -156,7 +156,7 @@ resource "aws_instance" "client" {
   }
 
   tags = {
-      Name = "hclient-${count.index}"
+    Name = "hclient-${count.index}"
   }
 }
 
@@ -166,20 +166,20 @@ resource "aws_instance" "client" {
 resource "local_file" "config" {
   depends_on = [aws_instance.server, aws_instance.client]
   filename   = "./file/config.json"
-  content    = templatefile("./file/clusterCfg.json.tftpl", {
+  content = templatefile("./file/clusterCfg.json.tftpl", {
     server_hosts = jsonencode(
-    merge(
-      {for idx, s in aws_instance.server.*: "hs-s${idx + 1}" => [s.public_ip, s.private_ip]}, 
-      {for idx, s in aws_instance.client.*: "hs-c${idx + 1}" => [s.public_ip, s.private_ip]}
-    ))})
+      merge(
+        { for idx, s in aws_instance.server.* : "hs-s${idx + 1}" => [s.public_ip, s.private_ip] },
+        { for idx, s in aws_instance.client.* : "hs-c${idx + 1}" => [s.public_ip, s.private_ip] }
+  )) })
 }
 
 resource "null_resource" "echo_config" {
-    depends_on = [local_file.config]
+  depends_on = [local_file.config]
 
-    provisioner "local-exec" {
-        command = "cat ${local_file.config.filename}"
-    }
+  provisioner "local-exec" {
+    command = "cat ${local_file.config.filename}"
+  }
 }
 
 # ---------- start server & client ---------------------
@@ -217,14 +217,14 @@ resource "null_resource" "start-client" {
 # -------------- dump net topology -----------------------
 
 resource "null_resource" "dump_topology" {
-    depends_on = [
-        aws_instance.server,
-        aws_instance.client
-    ]
+  depends_on = [
+    aws_instance.server,
+    aws_instance.client
+  ]
 
-    provisioner "local-exec" {
-        command = "terraform output -json > ./file/topology"
-    }
+  provisioner "local-exec" {
+    command = "terraform output -json > ./file/topology"
+  }
 }
 
 /* # -------------------------------------------------------------------------------- */

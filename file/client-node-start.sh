@@ -49,7 +49,7 @@ sudo chmod a+rw /var/run/docker.sock
 # # sudo mount /dev/vdb /data
 
 echo "==== pull images ===="
-docker pull hstreamdb/hstream 
+docker pull hstreamdb/hstream:latest
 docker pull gcr.io/cadvisor/cadvisor:v0.39.3
 docker pull prom/node-exporter
 docker pull prom/prometheus

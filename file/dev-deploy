@@ -51,11 +51,11 @@ ADMIN_OPTS = (
 
 
 def parse_roles(role: str) -> str:
-    if role == "Both":
+    if role == "Both" or role == "both":
         return "--roles storage,sequencer "
-    elif role == "Storage":
+    elif role == "Storage" or role == "storage":
         return "--roles storage "
-    elif role == "Sequencer":
+    elif role == "Sequencer" or role == "sequencer":
         return "--roles sequencer "
     else:
         raise f"Unknown roles: {role}"
@@ -924,7 +924,7 @@ class HServerService(Service):
                     f"--store-admin-host {store_admin_host} "
                     f"--server-id {i} "
                     f"--store-log-level error "
-                    f"--seed-nodes {seed_address}"
+                    f"--seed-nodes {seed_address} "
                     f"'"
                 )
         return cmds
@@ -1358,6 +1358,7 @@ class SimpleService(Service):
             self.admin_hosts = []
             admin = deploy_cfg["hstore-admin"]["hosts"]
             self.admin_embed = deploy_cfg["hstore-admin"]["embed"]
+            self.meta_replication_factor = deploy_cfg["hstore-admin"]["meta-replication"]
             if deploy_cfg["hstore-admin"]["embed"]:
                 if not admin in deploy_cfg["hstore"]["hosts"]:
                     raise "hadmin node not in hstore hosts' list."
@@ -1592,7 +1593,7 @@ class SimpleService(Service):
             "container_bin": self.DEFAULT_CONTAINER_BIN,
             "container_name": image,
             "remotes": self.admin_hosts,
-            "replicates": 3,
+            "replicates": self.meta_replication_factor,
             "server_list": ",".join(
                 map(lambda pair: f"{pair[0]}:{pair[1]}", self.hstore_hosts)
             ),
