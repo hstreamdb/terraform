@@ -4,6 +4,10 @@ variable "region" {
   type = string
 }
 
+variable "zone" {
+  type = string
+}
+
 variable "image_id" {
   description = "System image id."
   type        = string
@@ -14,7 +18,17 @@ variable "key_pair_name" {
   type        = string
 }
 
-variable "cidr_block" {
+variable "vpc_cidr_block" {
+  type    = string
+  default = "172.31.0.0/16"
+}
+
+variable "vpc_name" {
+  type    = string
+  default = "hstream"
+}
+
+variable "subnet_cidr_block" {
   type    = string
   default = "172.31.0.0/16"
 }
@@ -51,4 +65,24 @@ variable "cal_config" {
     iops          = number
     throughput    = number
   })
+}
+
+// ==== Security Group ====
+
+variable "security_group_name" {
+  type        = string
+  default     = "hstream"
+  description = "security group name"
+}
+
+variable "ingress_rules" {
+  type        = list(any)
+  default     = [null]
+  description = "ingress with cidr blocks"
+}
+
+variable "egress_rules" {
+  type        = list(any)
+  default     = [null]
+  description = "egress with cidr blocks"
 }
