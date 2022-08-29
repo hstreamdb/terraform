@@ -42,14 +42,6 @@ resource "alicloud_instance" "storage_instance" {
   vswitch_id                 = module.ali_vpc.vsw_id
   internet_max_bandwidth_out = var.internet_max_bandwidth_out
   internet_charge_type       = var.internet_charge_type
-  user_data                  = <<-EOF
-    #!/bin/bash
-    echo "==== mount disks ===="
-    sudo mkdir /data
-    sudo mkdir /mnt/data{0,1}
-    sudo mkfs -t ext4 /dev/vdb
-    sudo mount /dev/vdb /mnt/data0
-  EOF
 }
 
 resource "alicloud_instance" "calculate_instance" {
@@ -70,11 +62,13 @@ resource "alicloud_instance" "calculate_instance" {
 resource "alicloud_key_pair_attachment" "attachment_storage" {
   key_pair_name = var.key_pair_name
   instance_ids  = alicloud_instance.storage_instance.*.id
+  force         = true
 }
 
 resource "alicloud_key_pair_attachment" "attachment_calculate" {
   key_pair_name = var.key_pair_name
   instance_ids  = alicloud_instance.calculate_instance.*.id
+  force         = true
 }
 
 # ------------ step ------------
@@ -112,7 +106,7 @@ resource "null_resource" "start-server" {
   }
 
   provisioner "remote-exec" {
-    script = "../file/server-node-start.sh"
+    script = "./script/store-node-start.sh"
   }
 }
 
@@ -127,7 +121,7 @@ resource "null_resource" "start-client" {
   }
 
   provisioner "remote-exec" {
-    script = "../file/client-node-start.sh"
+    script = "./script/cal-node-start.sh"
   }
 }
 

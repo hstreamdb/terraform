@@ -7,8 +7,6 @@ global:
 
 rule_files:
   - "disks.yml"
-  - "memory_cpus.yml"
-  - "net.yml"
   - "cluster.yml"
   - "zk.yml"
 
@@ -18,52 +16,52 @@ scrape_configs:
     static_configs:
       - targets: ["hs-s1:9100"]
         labels:
-          group: "hs-store-0001"
+          target_node_name: "hs-store-0001"
 
       - targets: ["hs-s2:9100"]
         labels:
-          group: "hs-store-0002"
+          target_node_name: "hs-store-0002"
 
       - targets: ["hs-s3:9100"]
         labels:
-          group: "hs-store-0003"
+          target_node_name: "hs-store-0003"
 
   - job_name: "hstream-client"
     scrape_interval: 5s
     static_configs:
       - targets: ["hs-c1:9100"]
         labels:
-          group: "hs-cal-0001"
+          target_node_name: "hs-cal-0001"
 
   - job_name: "zookeeper"
     scrape_interval: 10s
     static_configs:
       - targets: ["hs-s1:7070"]
         labels:
-          group: "hs-store-0001"
+          target_node_name: "hs-store-0001"
 
       - targets: ["hs-s2:7070"]
         labels:
-          group: "hs-store-0002"
+          target_node_name: "hs-store-0002"
 
       - targets: ["hs-s3:7070"]
         labels:
-          group: "hs-store-0003"
+          target_node_name: "hs-store-0003"
 
   - job_name: "cadvisor"
     static_configs:
       - targets:  ["hs-s1:7000"]
         labels:
-          group: "hs-store-0001"
+          target_node_name: "hs-store-0001"
 
       - targets: ["hs-s2:7000"]
         labels:
-          group: "hs-store-0002"
+          target_node_name: "hs-store-0002"
 
       - targets: ["hs-s3:7000"]
         labels:
-          group: "hs-store-0003"
+          target_node_name: "hs-store-0003"
 
       - targets: ["hs-c1:7000"]
         labels:
-          group: "hs-cal-0001"
+          target_node_name: "hs-cal-0001"

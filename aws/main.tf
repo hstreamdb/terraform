@@ -129,7 +129,7 @@ resource "null_resource" "start-server" {
   }
 
   provisioner "remote-exec" {
-    script = "../file/server-node-start.sh"
+    script = "./script/store-node-start.sh"
   }
 }
 
@@ -144,7 +144,7 @@ resource "null_resource" "start-client" {
   }
 
   provisioner "remote-exec" {
-    script = "../file/client-node-start.sh"
+    script = "./script/cal-node-start.sh"
   }
 }
 
