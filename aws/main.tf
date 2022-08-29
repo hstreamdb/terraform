@@ -20,97 +20,31 @@ provider "aws" {
 
 # --------------------------------------------------------------------------------
 
-resource "aws_vpc" "vpc" {
-  cidr_block = var.cidr_block
+module "aws_vpc" {
+  source            = "./modules/vpc"
+  vpc_name          = var.vpc_name
+  vpc_cidr_block    = var.vpc_cidr_block
+  subnet_cidr_block = var.subnet_cidr_block
+  zone              = var.zone
 }
 
-resource "aws_subnet" "net" {
-  vpc_id     = aws_vpc.vpc.id
-  cidr_block = var.cidr_block
-}
-
-resource "aws_internet_gateway" "gateway" {
-  vpc_id = aws_vpc.vpc.id
-}
-
-resource "aws_route_table" "route" {
-  vpc_id = aws_vpc.vpc.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.gateway.id
-  }
-}
-
-resource "aws_route_table_association" "main" {
-  subnet_id      = aws_subnet.net.id
-  route_table_id = aws_route_table.route.id
-}
-
-resource "aws_security_group" "hstream" {
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    self      = true
-  }
-  ingress {
-    from_port   = 7070
-    to_port     = 7070
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 7000
-    to_port     = 7000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 9100
-    to_port     = 9100
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 9090
-    to_port     = 9090
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  vpc_id = aws_vpc.vpc.id
-  tags = {
-    Name = "hstream-cluster"
-  }
+module "aws_sec_group" {
+  source        = "./modules/security_group"
+  vpc_id        = module.aws_vpc.vpc_id
+  sg_name       = "hstream"
+  ingress_rules = var.ingress_rules
+  egress_rules  = var.egress_rules
 }
 
 # --------------------------------------------------------------------------------
 
-resource "aws_instance" "server" {
+resource "aws_instance" "storage_instance" {
   count                       = var.store_config.node_count
   ami                         = var.image_id
   instance_type               = var.store_config.instance_type
   key_name                    = var.key_pair_name
-  vpc_security_group_ids      = [aws_security_group.hstream.id]
-  subnet_id                   = aws_subnet.net.id
+  vpc_security_group_ids      = [module.aws_sec_group.sec_group_id]
+  subnet_id                   = module.aws_vpc.subnet_id
   associate_public_ip_address = true
   user_data                   = <<-EOF
     #!/bin/bash
@@ -138,13 +72,13 @@ resource "aws_instance" "server" {
   }
 }
 
-resource "aws_instance" "client" {
+resource "aws_instance" "calculate_instance" {
   count                       = var.cal_config.node_count
   ami                         = var.image_id
   instance_type               = var.cal_config.instance_type
   key_name                    = var.key_pair_name
-  vpc_security_group_ids      = [aws_security_group.hstream.id]
-  subnet_id                   = aws_subnet.net.id
+  vpc_security_group_ids      = [module.aws_sec_group.sec_group_id]
+  subnet_id                   = module.aws_vpc.subnet_id
   associate_public_ip_address = true
 
   root_block_device {
@@ -164,13 +98,13 @@ resource "aws_instance" "client" {
 
 # ----------- generate config file -------------------
 resource "local_file" "config" {
-  depends_on = [aws_instance.server, aws_instance.client]
-  filename   = "./file/config.json"
-  content = templatefile("./file/clusterCfg.json.tftpl", {
+  depends_on = [aws_instance.storage_instance, aws_instance.calculate_instance]
+  filename   = "../file/config.json"
+  content = templatefile("../file/clusterCfg.json.tftpl", {
     server_hosts = jsonencode(
       merge(
-        { for idx, s in aws_instance.server.* : "hs-s${idx + 1}" => [s.public_ip, s.private_ip] },
-        { for idx, s in aws_instance.client.* : "hs-c${idx + 1}" => [s.public_ip, s.private_ip] }
+        { for idx, s in aws_instance.storage_instance.* : "hs-s${idx + 1}" => [s.public_ip, s.private_ip] },
+        { for idx, s in aws_instance.calculate_instance.* : "hs-c${idx + 1}" => [s.public_ip, s.private_ip] }
   )) })
 }
 
@@ -191,11 +125,11 @@ resource "null_resource" "start-server" {
   connection {
     user        = "ubuntu"
     private_key = file(var.private_key_path)
-    host        = aws_instance.server[count.index].public_ip
+    host        = aws_instance.storage_instance[count.index].public_ip
   }
 
   provisioner "remote-exec" {
-    script = "./file/server-node-start.sh"
+    script = "../file/server-node-start.sh"
   }
 }
 
@@ -206,11 +140,11 @@ resource "null_resource" "start-client" {
   connection {
     user        = "ubuntu"
     private_key = file(var.private_key_path)
-    host        = aws_instance.client[count.index].public_ip
+    host        = aws_instance.calculate_instance[count.index].public_ip
   }
 
   provisioner "remote-exec" {
-    script = "./file/client-node-start.sh"
+    script = "../file/client-node-start.sh"
   }
 }
 
@@ -218,30 +152,12 @@ resource "null_resource" "start-client" {
 
 resource "null_resource" "dump_topology" {
   depends_on = [
-    aws_instance.server,
-    aws_instance.client
+    aws_instance.storage_instance,
+    aws_instance.calculate_instance
   ]
 
   provisioner "local-exec" {
-    command = "terraform output -json > ./file/topology"
+    command = "terraform output -json > ../file/topology"
   }
-}
-
-/* # -------------------------------------------------------------------------------- */
-
-output "server_public_ip" {
-  value = aws_instance.server[*].public_ip
-}
-
-output "server_access_ip" {
-  value = aws_instance.server[*].private_ip
-}
-
-output "client_public_ip" {
-  value = aws_instance.client[*].public_ip
-}
-
-output "client_access_ip" {
-  value = aws_instance.client[*].private_ip
 }
 
