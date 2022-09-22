@@ -1,0 +1,26 @@
+{
+  "hserver": {
+    "count": 3,
+    "instance_type": "ecs.i2gne.2xlarge"
+  },
+  "hstore": {
+    "count": 3,
+    "instance_type": "ecs.i2gne.2xlarge"
+  },
+  "meta_store": {
+    "count": 3,
+    "instance_type": "ecs.i2gne.2xlarge"
+  },
+  "prometheus": {
+    "count": 1,
+    "instance_type": "ecs.g6.4xlarge"
+  },
+  "grafana": {
+    "count": 1,
+    "instance_type": "ecs.g6.4xlarge"
+  },
+  "center": {
+    "count": 1,
+    "instance_type": "ecs.g6.4xlarge"
+  }
+}

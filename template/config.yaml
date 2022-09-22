@@ -1,0 +1,141 @@
+{# template/config.yaml #}
+global:
+  # # Username to login via SSH
+  user: {{ user }}
+  # # The path of SSH identity file
+  # key_path: "~/.ssh/hstream-aliyun.pem"
+  # # SSH service monitor port
+  ssh_port: 22
+  # # Replication factors of store metadata
+  # meta_replica: 3
+  # # MetaStore config file path in local host
+  # meta_store_config_path: ""
+  # # HStore config file path in local host
+  # hstore_config_path: ""
+  # # HStore config file can be loaded from network filesystem, for example, the config file
+  # # can be stored in meta store and loaded via network request. Set this option to true will
+  # # force store load config file from its local filesystem.
+  # disable_store_network_config_path: true
+  # # HServer config file path in local host
+  # hserver_config_path: ""
+  # # Global container configuration
+  # container_config:
+    # cpu_limit: 200
+    # memory_limit: 8G
+    # disable_restart: true
+    # remove_when_exit: true
+
+monitor:
+  # # Node exporter port
+  node_exporter_port: 9100
+  # # Node exporter image
+  # node_exporter_image: "prom/node-exporter"
+  # # Cadvisor port
+  cadvisor_port: 7000
+  # # Cadvisor image
+  # cadvisor_image: "gcr.lank8s.cn/cadvisor/cadvisor:v0.39.3"
+  # # List of nodes that don't deploy monitor.
+  # excluded_hosts: []
+  # remote_config_path: "/home/deploy/monitor"
+  # data_dir: "/home/deploy/data/monitor"
+  grafana_disable_login: true
+  # container_config:
+    # cpu_limit: 200
+    # memory_limit: 8G
+    # disable_restart: true
+    # remove_when_exit: true
+
+{%- if hserver is defined %}
+hserver:
+{%- for host in hserver %}
+  # # The ip address of the HServer
+  - host: {{ host }}
+    # # HServer docker image
+    # image: "hstreamdb/hstream"
+    # # HServer configuration
+    # server_config:
+      # # HServer log level
+      # server_log_level: info
+      # # HStore log level
+      # store_log_level: error
+      # # Specific server compression algorithm
+      # compression: lz4
+    # # HServer container configuration
+    # container_config:
+      # cpu_limit: 200
+      # memory_limit: 8G
+      # disable_restart: true
+      # remove_when_exit: true
+    # remote_config_path: "/home/deploy/hserver"
+{%- endfor %}
+{% endif %}
+
+{%- if hstore is defined %}
+hstore:
+{%- for host in hstore %}
+  - host: {{ host }}
+    # image: "hstreamdb/hstream"
+    # remote_config_path: "/home/deploy/hstore"
+    # data_dir: "/home/deploy/data/store"
+    # disk: 1
+    # shards: 2
+    # role: "Both" # [Storage|Sequencer|Both]
+    {%- if host == hadmin %}
+    enable_admin: true
+    {%- endif %}
+    # container_config:
+      # cpu_limit: 200
+      # memory_limit: 8G
+      # disable_restart: true
+      # remove_when_exit: true
+{%- endfor %}
+{% endif %}
+
+{%- if meta_store is defined %}
+meta_store:
+{%- for host in meta_store %}
+  - host: {{ host }}
+    # image: "zookeeper:3.6"
+    # data_dir: "/home/deploy/data/meta"
+    # remote_config_path: "/home/deploy/hstore"
+    # container_config:
+      # cpu_limit: 200
+      # memory_limit: 8G
+      # disable_restart: true
+      # remove_when_exit: true
+{%- endfor %}
+{% endif %}
+
+{%- if prometheus is defined %}
+prometheus:
+{%- for host in prometheus %}
+  - host: {{ host }}
+    # # Prometheus service monitor port
+    # port: 9090
+    # # Prometheus image
+    # image: "prom/prometheus"
+    # data_dir: "/home/deploy/data/prometheus"
+    # remote_config_path: "/home/deploy/prometheus"
+    # container_config:
+      # cpu_limit: 200
+      # memory_limit: 8G
+      # disable_restart: true
+      # remove_when_exit: true
+{%- endfor %}
+{% endif %}
+
+{%- if grafana is defined %}
+grafana:
+{%- for host in grafana %}
+  - host: {{ host }}
+    # port: 3000
+    # image: "grafana/grafana-oss:main"
+    # data_dir: "/home/deploy/data/grafana"
+    # remote_config_path: "/home/deploy/grafana"
+    # container_config:
+      # cpu_limit: 200
+      # memory_limit: 8G
+      # disable_restart: true
+      # remove_when_exit: true
+{%- endfor %}
+{% endif %}
