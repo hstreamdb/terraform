@@ -6,19 +6,22 @@ output "vsw_id" {
   value = module.ali_vpc.vsw_id
 }
 
-output "server_public_ip" {
-  value = alicloud_instance.storage_instance[*].public_ip
-}
-
-output "server_access_ip" {
-  value = alicloud_instance.storage_instance[*].private_ip
-}
-
-output "client_public_ip" {
-  value = alicloud_instance.calculate_instance[*].public_ip
-}
-
-output "client_access_ip" {
-  value = alicloud_instance.calculate_instance[*].private_ip
+output "node_info" {
+  value = merge(
+    {
+      for idx, n in alicloud_instance.storage_instance.* : "hs-s${idx + 1}" => {
+        public_ip     = n.public_ip
+        access_ip     = n.private_ip
+        instance_type = n.instance_type
+      }
+    },
+    {
+      for idx, n in alicloud_instance.calculate_instance.* : "hs-c${idx + 1}" => {
+        public_ip     = n.public_ip
+        access_ip     = n.private_ip
+        instance_type = n.instance_type
+      }
+    },
+  )
 }
 

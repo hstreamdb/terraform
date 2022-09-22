@@ -3,14 +3,14 @@
 variable "region" {
   type        = string
   description = "region name"
-  default     = "cn-zhangjiakou"
+  default     = "cn-hangzhou"
   sensitive   = true
 }
 
 variable "zone" {
   type        = string
   description = "zone name"
-  default     = "cn-zhangjiakou-a"
+  default     = "cn-hangzhou-i"
   sensitive   = true
 }
 

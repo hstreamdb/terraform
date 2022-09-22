@@ -92,34 +92,33 @@ resource "aws_instance" "calculate_instance" {
   tags = {
     Name = "hclient-${count.index}"
   }
-}
 
-# ------------ step ------------
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file(var.private_key_path)
+    host        = self.public_ip
+  }
 
-# ----------- generate config file -------------------
-resource "local_file" "config" {
-  depends_on = [aws_instance.storage_instance, aws_instance.calculate_instance]
-  filename   = "../file/config.json"
-  content = templatefile("../file/clusterCfg.json.tftpl", {
-    server_hosts = jsonencode(
-      merge(
-        { for idx, s in aws_instance.storage_instance.* : "hs-s${idx + 1}" => [s.public_ip, s.private_ip] },
-        { for idx, s in aws_instance.calculate_instance.* : "hs-c${idx + 1}" => [s.public_ip, s.private_ip] }
-  )) })
-}
+  provisioner "file" {
+    source      = var.private_key_path
+    destination = "/home/ubuntu/.ssh/id_rsa"
+  }
 
-resource "null_resource" "echo_config" {
-  depends_on = [local_file.config]
-
-  provisioner "local-exec" {
-    command = "cat ${local_file.config.filename}"
+  provisioner "remote-exec" {
+    inline = [
+      "cp ~/.ssh/authorized_keys ~/.ssh/id_rsa.pub",
+      "chmod 600 ~/.ssh/id_rsa",
+      "chmod 600 ~/.ssh/id_rsa.pub",
+    ]
   }
 }
 
+# ------------ step ------------
 # ---------- start server & client ---------------------
 
 resource "null_resource" "start-server" {
-  depends_on = [local_file.config]
+  depends_on = [aws_instance.storage_instance]
   count      = var.store_config.node_count
 
   connection {
@@ -134,7 +133,7 @@ resource "null_resource" "start-server" {
 }
 
 resource "null_resource" "start-client" {
-  depends_on = [local_file.config]
+  depends_on = [aws_instance.calculate_instance]
   count      = var.cal_config.node_count
 
   connection {
@@ -148,16 +147,16 @@ resource "null_resource" "start-client" {
   }
 }
 
-# -------------- dump net topology -----------------------
+# -------------- dump node_info -----------------------
 
 resource "null_resource" "dump_topology" {
   depends_on = [
-    aws_instance.storage_instance,
-    aws_instance.calculate_instance
+    null_resource.start-server,
+    null_resource.start-client
   ]
 
   provisioner "local-exec" {
-    command = "terraform output -json > ../file/topology"
+    command = "terraform output -json > ../node_info"
   }
 }
 

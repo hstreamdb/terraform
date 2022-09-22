@@ -42,6 +42,15 @@ resource "alicloud_instance" "storage_instance" {
   vswitch_id                 = module.ali_vpc.vsw_id
   internet_max_bandwidth_out = var.internet_max_bandwidth_out
   internet_charge_type       = var.internet_charge_type
+  key_name                   = var.key_pair_name
+  user_data                  = <<-EOF
+    #!/bin/bash
+    echo "==== mount disks ===="
+    sudo mkdir /data
+    sudo mkdir /mnt/data{0,1}
+    sudo mkfs -t ext4 /dev/vdb
+    sudo mount /dev/vdb /mnt/data0
+  EOF
 }
 
 resource "alicloud_instance" "calculate_instance" {
@@ -57,46 +66,34 @@ resource "alicloud_instance" "calculate_instance" {
   vswitch_id                 = module.ali_vpc.vsw_id
   internet_max_bandwidth_out = var.internet_max_bandwidth_out
   internet_charge_type       = var.internet_charge_type
-}
+  key_name                   = var.key_pair_name
 
-resource "alicloud_key_pair_attachment" "attachment_storage" {
-  key_pair_name = var.key_pair_name
-  instance_ids  = alicloud_instance.storage_instance.*.id
-  force         = true
-}
+  connection {
+    type        = "ssh"
+    user        = "root"
+    private_key = file(var.private_key_path)
+    host        = self.public_ip
+  }
 
-resource "alicloud_key_pair_attachment" "attachment_calculate" {
-  key_pair_name = var.key_pair_name
-  instance_ids  = alicloud_instance.calculate_instance.*.id
-  force         = true
-}
+  provisioner "file" {
+    source      = var.private_key_path
+    destination = "/root/.ssh/id_rsa"
+  }
 
-# ------------ step ------------
-
-# ----------- generate config file -------------------
-resource "local_file" "config" {
-  depends_on = [alicloud_instance.storage_instance, alicloud_instance.calculate_instance, alicloud_key_pair_attachment.attachment_storage, alicloud_key_pair_attachment.attachment_calculate]
-  filename   = "../file/config.json"
-  content = templatefile("../file/clusterCfg.json.tftpl", {
-    server_hosts = jsonencode(
-      merge(
-        { for idx, s in alicloud_instance.storage_instance.* : "hs-s${idx + 1}" => [s.public_ip, s.private_ip] },
-        { for idx, s in alicloud_instance.calculate_instance.* : "hs-c${idx + 1}" => [s.public_ip, s.private_ip] }
-  )) })
-}
-
-resource "null_resource" "echo_config" {
-  depends_on = [local_file.config]
-
-  provisioner "local-exec" {
-    command = "cat ${local_file.config.filename}"
+  provisioner "remote-exec" {
+    inline = [
+      "cp ~/.ssh/authorized_keys ~/.ssh/id_rsa.pub",
+      "chmod 600 ~/.ssh/id_rsa",
+      "chmod 600 ~/.ssh/id_rsa.pub",
+    ]
   }
 }
 
+# ------------ step ------------
 # ---------- start server & client ---------------------
 
 resource "null_resource" "start-server" {
-  depends_on = [local_file.config]
+  depends_on = [alicloud_instance.storage_instance]
   count      = var.storage_instance_config.node_count
 
   connection {
@@ -111,7 +108,7 @@ resource "null_resource" "start-server" {
 }
 
 resource "null_resource" "start-client" {
-  depends_on = [local_file.config]
+  depends_on = [alicloud_instance.calculate_instance]
   count      = var.calculate_instance_config.node_count
 
   connection {
@@ -125,15 +122,15 @@ resource "null_resource" "start-client" {
   }
 }
 
-# -------------- dump net topology -----------------------
+# -------------- dump node_info -----------------------
 
 resource "null_resource" "dump_topology" {
   depends_on = [
-    alicloud_instance.storage_instance,
-    alicloud_instance.calculate_instance
+    null_resource.start-server,
+    null_resource.start-client
   ]
 
   provisioner "local-exec" {
-    command = "terraform output -json > ../file/topology"
+    command = "terraform output -json > ../node_info"
   }
 }

@@ -1,17 +1,20 @@
-region = "cn-zhangjiakou"
-zone   = "cn-zhangjiakou-c"
-#region         = "cn-hangzhou"
-#zone           = "cn-hangzhou-a"
-vpc_cidr_block   = "172.10.0.0/16"
-vsw_cidr_block   = "172.10.1.0/24"
-key_pair_name    = "hstream-aliyun"
-private_key_path = "~/.ssh/hstream-aliyun.pem"
-image_id         = "ubuntu_20_04_x64_20G_alibase_20210623.vhd"
+#region = "cn-zhangjiakou"
+#zone   = "cn-zhangjiakou-c"
+region           = "cn-hangzhou"
+zone             = "cn-hangzhou-i"
+vpc_cidr_block   = "172.20.0.0/16"
+vsw_cidr_block   = "172.20.1.0/24"
+key_pair_name    = "hstream-aliyun-yanxiang"
+private_key_path = "~/.ssh/hstream-aliyun-yanxiang.pem"
+#key_pair_name    = "hstream-aliyun"
+#private_key_path = "~/.ssh/hstream-aliyun.pem"
+image_id = "ubuntu_20_04_x64_20G_alibase_20210623.vhd"
 
 ecs_vswitch_conf = {
-  name   = "hstream-vswitch"
-  region = "cn-zhangjiakou"
-  cidr   = "172.10.1.0/24"
+  name = "hstream-vswitch-1"
+  #  region = "cn-zhangjiakou"
+  region = "cn-hangzhou"
+  cidr   = "172.20.1.0/24"
 }
 
 ingress_with_cidr_blocks = [
@@ -80,16 +83,21 @@ internet_max_bandwidth_out = 100
 # ==== store node config ====
 
 storage_instance_config = {
-  node_count = 3
-  #  instance_type        = "ecs.i2gne.2xlarge"
-  instance_type        = "ecs.i2gne.4xlarge"
-  system_disk_category = "cloud_efficiency"
+  node_count    = 3
+  instance_type = "ecs.i2gne.2xlarge"
+  #  instance_type        = "ecs.i2gne.4xlarge"
+  #  instance_type        = "ecs.g7.large"
+  #  system_disk_category = "cloud_efficiency"
+  system_disk_category = "cloud_essd"
   system_disk_size     = 50
 }
 
 calculate_instance_config = {
-  node_count           = 1
-  instance_type        = "ecs.g6.4xlarge"
-  system_disk_category = "cloud_efficiency"
+  node_count    = 1
+  instance_type = "ecs.g6.4xlarge"
+  #  instance_type        = "ecs.g7.large"
+  #  instance_type        = "ecs.g7ne.4xlarge"
+  #  system_disk_category = "cloud_efficiency"
+  system_disk_category = "cloud_essd"
   system_disk_size     = 50
 }

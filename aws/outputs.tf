@@ -1,15 +1,18 @@
-output "storage_instance_public_ip" {
-  value = aws_instance.storage_instance[*].public_ip
-}
-
-output "storage_instance_access_ip" {
-  value = aws_instance.storage_instance[*].private_ip
-}
-
-output "calculate_instance_public_ip" {
-  value = aws_instance.calculate_instance[*].public_ip
-}
-
-output "calculate_instance_access_ip" {
-  value = aws_instance.calculate_instance[*].private_ip
+output "node_info" {
+  value = merge(
+    {
+      for idx, n in aws_instance.storage_instance.* : "hs-s${idx + 1}" => {
+        public_ip     = n.public_ip
+        access_ip     = n.private_ip
+        instance_type = n.instance_type
+      }
+    },
+    {
+      for idx, n in aws_instance.calculate_instance.* : "hs-c${idx + 1}" => {
+        public_ip     = n.public_ip
+        access_ip     = n.private_ip
+        instance_type = n.instance_type
+      }
+    },
+  )
 }

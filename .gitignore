@@ -38,3 +38,4 @@ local*
 file/topology
 file/prometheus-cfg/prometheus.yml
 file/config.json
+node_info
