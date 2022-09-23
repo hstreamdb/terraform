@@ -149,7 +149,7 @@ def get_deploy_topology(
 
 
 def config_gen(
-    deploy_topology: Mapping[str, List[InstanceTemplate]], user: str
+    deploy_topology: Mapping[str, InstanceTemplate], user: str
 ) -> str:
     deploy_topology["user"] = user
     environment = Environment(loader=FileSystemLoader("template/"))
@@ -163,7 +163,7 @@ def config_gen(
 
 def set_up_cluster(key: str, user: str, host: str):
     ssh_cmd = f"ssh -i {key} {user}@{host} -o 'StrictHostKeyChecking no' -o 'UserKnownHostsFile=/dev/null'"
-    scp_config = f"scp -i {key} -o 'StrictHostKeyChecking no' -o 'UserKnownHostsFile=/dev/null' -r config {user}@{host}:/hstream_config"
+    scp_config = f"scp -i {key} -o 'StrictHostKeyChecking no' -o 'UserKnownHostsFile=/dev/null' -r config {user}@{host}:/hstream_config "
     run_cmd(scp_config)
 
     run_cmd(
@@ -221,14 +221,21 @@ class StartCmd(Command):
             choices=CLOUD_PLATFORM,
             help="cloud server platform.",
         )
+        parser.add_argument(
+            "--skip-terraform",
+            "-s",
+            action="store_true",
+            help="skip starting machines with terraform",
+        )
 
     def handle(self, args):
         # 1. set up environment
-        res = terraform_up(args.cloud)
-        if res.returncode != 0:
-            logerr(f"terraform_up err, {res.stderr}")
-            sys.exit(1)
-        loginfo("set up terraform success")
+        if not args.skip_terraform:
+            res = terraform_up(args.cloud)
+            if res.returncode != 0:
+                logerr(f"terraform_up err, {res.stderr}")
+                sys.exit(1)
+            loginfo("set up terraform success")
 
         # 2. generate cluster config file
         nodes_by_type = parse_node_info()
