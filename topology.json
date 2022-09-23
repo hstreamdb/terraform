@@ -1,23 +1,28 @@
 {
   "hserver": {
     "count": 3,
-    "instance_type": "ecs.i2gne.2xlarge"
+    "instance_type": "ecs.i2gne.2xlarge",
+    "image": "hstreamdb/hstream"
   },
   "hstore": {
     "count": 3,
-    "instance_type": "ecs.i2gne.2xlarge"
+    "instance_type": "ecs.i2gne.2xlarge",
+    "image": "hstreamdb/hstream"
   },
   "meta_store": {
     "count": 3,
-    "instance_type": "ecs.i2gne.2xlarge"
+    "instance_type": "ecs.i2gne.2xlarge",
+    "image": "zookeeper:3.6"
   },
   "prometheus": {
     "count": 1,
-    "instance_type": "ecs.g6.4xlarge"
+    "instance_type": "ecs.g6.4xlarge",
+    "image": "prom/prometheus"
   },
   "grafana": {
     "count": 1,
-    "instance_type": "ecs.g6.4xlarge"
+    "instance_type": "ecs.g6.4xlarge",
+    "image": "grafana/grafana-oss:main"
   },
   "center": {
     "count": 1,

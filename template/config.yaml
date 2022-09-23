@@ -47,11 +47,15 @@ monitor:
 
 {%- if hserver is defined %}
 hserver:
-{%- for host in hserver %}
+{%- for host in hserver.hosts %}
   # # The ip address of the HServer
   - host: {{ host }}
     # # HServer docker image
+    {%- if hserver.image != "" %}
+    image: {{ hserver.image }}
+    {%- else %}
     # image: "hstreamdb/hstream"
+    {%- endif %}
     # # HServer configuration
     # server_config:
       # # HServer log level
@@ -72,9 +76,13 @@ hserver:
 
 {%- if hstore is defined %}
 hstore:
-{%- for host in hstore %}
+{%- for host in hstore.hosts %}
   - host: {{ host }}
+    {%- if hstore.image != "" %}
+    image: {{ hstore.image }}
+    {%- else %}
     # image: "hstreamdb/hstream"
+    {%- endif %}
     # remote_config_path: "/home/deploy/hstore"
     # data_dir: "/home/deploy/data/store"
     # disk: 1
@@ -93,9 +101,13 @@ hstore:
 
 {%- if meta_store is defined %}
 meta_store:
-{%- for host in meta_store %}
+{%- for host in meta_store.hosts %}
   - host: {{ host }}
+    {%- if meta_store.image != "" %}
+    image: {{ meta_store.image }}
+    {%- else %}
     # image: "zookeeper:3.6"
+    {%- endif %}
     # data_dir: "/home/deploy/data/meta"
     # remote_config_path: "/home/deploy/hstore"
     # container_config:
@@ -108,12 +120,16 @@ meta_store:
 
 {%- if prometheus is defined %}
 prometheus:
-{%- for host in prometheus %}
+{%- for host in prometheus.hosts %}
   - host: {{ host }}
     # # Prometheus service monitor port
     # port: 9090
     # # Prometheus image
+    {%- if prometheus.image != "" %}
+    image: {{ prometheus.image }}
+    {%- else %}
     # image: "prom/prometheus"
+    {%- endif %}
     # data_dir: "/home/deploy/data/prometheus"
     # remote_config_path: "/home/deploy/prometheus"
     # container_config:
@@ -126,10 +142,14 @@ prometheus:
 
 {%- if grafana is defined %}
 grafana:
-{%- for host in grafana %}
+{%- for host in grafana.hosts %}
   - host: {{ host }}
     # port: 3000
+    {%- if grafana.image != "" %}
+    image: {{ grafana.image }}
+    {%- else %}
     # image: "grafana/grafana-oss:main"
+    {%- endif %}
     # data_dir: "/home/deploy/data/grafana"
     # remote_config_path: "/home/deploy/grafana"
     # container_config:

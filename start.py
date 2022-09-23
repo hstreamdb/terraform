@@ -94,6 +94,12 @@ class NodeInfo:
     instance_type: str
 
 
+@dataclasses.dataclass
+class InstanceTemplate:
+    hosts: List[str]
+    image: str
+
+
 def get_nodes_by_instance(nodes: List[NodeInfo], cnt: int) -> List[str]:
     if len(nodes) < cnt:
         logerr(f"the number of {nodes[0].instance_type} nodes less than {cnt}")
@@ -121,7 +127,7 @@ def parse_node_info() -> Mapping[str, List[NodeInfo]]:
 
 def get_deploy_topology(
     nodes_by_type: Mapping[str, List[NodeInfo]]
-) -> Tuple[str, Mapping[str, List[str]]]:
+) -> Tuple[str, Mapping[str, InstanceTemplate]]:
     with open("topology.json", "r") as f:
         topo = json.load(f)
 
@@ -132,15 +138,19 @@ def get_deploy_topology(
             center_node = nodes_by_type[v["instance_type"]][0].public_ip
             logdebug(f"get center node ip: {center_node}")
         else:
-            res[k] = get_nodes_by_instance(
+            host = get_nodes_by_instance(
                 nodes_by_type[v["instance_type"]], v["count"]
             )
-    res["hadmin"] = res["hstore"][0]
+            image = v.get("image", "")
+            res[k] = InstanceTemplate(host, image)
+    res["hadmin"] = res["hstore"].hosts[0]
     logdebug(f"cluster topology: {res}")
     return center_node, res
 
 
-def config_gen(deploy_topology: Mapping[str, List[str]], user: str) -> str:
+def config_gen(
+    deploy_topology: Mapping[str, List[InstanceTemplate]], user: str
+) -> str:
     deploy_topology["user"] = user
     environment = Environment(loader=FileSystemLoader("template/"))
     template = environment.get_template("config.yaml")
