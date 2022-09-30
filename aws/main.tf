@@ -70,6 +70,26 @@ resource "aws_instance" "storage_instance" {
   tags = {
     Name = "hserver-${count.index}"
   }
+
+    connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file(var.private_key_path)
+    host        = self.public_ip
+  }
+
+  provisioner "file" {
+    source      = var.private_key_path
+    destination = "/home/ubuntu/.ssh/id_rsa"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "cp ~/.ssh/authorized_keys ~/.ssh/id_rsa.pub",
+      "chmod 600 ~/.ssh/id_rsa",
+      "chmod 600 ~/.ssh/id_rsa.pub",
+    ]
+  }
 }
 
 resource "aws_instance" "calculate_instance" {
