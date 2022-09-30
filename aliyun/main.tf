@@ -3,7 +3,7 @@ terraform {
   required_providers {
     alicloud = {
       source  = "hashicorp/alicloud"
-      version = "1.178.0"
+      version = "1.186.0"
     }
   }
 }
@@ -51,6 +51,26 @@ resource "alicloud_instance" "storage_instance" {
     sudo mkfs -t ext4 /dev/vdb
     sudo mount /dev/vdb /mnt/data0
   EOF
+
+  connection {
+    type        = "ssh"
+    user        = "root"
+    private_key = file(var.private_key_path)
+    host        = self.public_ip
+  }
+
+  provisioner "file" {
+    source      = var.private_key_path
+    destination = "/root/.ssh/id_rsa"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "cp ~/.ssh/authorized_keys ~/.ssh/id_rsa.pub",
+      "chmod 600 ~/.ssh/id_rsa",
+      "chmod 600 ~/.ssh/id_rsa.pub",
+    ]
+  }
 }
 
 resource "alicloud_instance" "calculate_instance" {
